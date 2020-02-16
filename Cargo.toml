@@ -1,0 +1,9 @@
+[package]
+name = "image-sorter"
+version = "0.1.0"
+authors = ["Shootertrex"]
+edition = "2018"
+
+[dependencies]
+iced = { git = "https://github.com/hecrj/iced", features = ["image"]}
+sorter_backend = { path = "../image_backend" }
