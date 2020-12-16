@@ -1,12 +1,15 @@
 use iced::{
-    button, image, text_input, Button, Column, Container, Element, Image, Length, Row, Sandbox,
+    button, Command, image, text_input, Button, Column, Container, Element, Image, Length, Row, Sandbox,
     Settings, Text, TextInput,
 };
+use iced_winit:: {Widget};
 use sorter_backend::Backend;
+use std::path::{Path, PathBuf};
 
 pub fn main() {
     // can change Settings to allow for resizable and different starting size
-    Frontend::run(Settings::default())
+    // Frontend::run(Settings::default())
+    Frontend::run(Settings::default());
 }
 
 #[derive(Default)]
@@ -19,6 +22,9 @@ struct Frontend {
 
     increment_button: button::State,
     decrement_button: button::State,
+
+    folder_buttons: Vec<button::State>,
+    folder_buttons1: Vec<Folder>,
 }
 
 #[derive(Debug, Clone)]
@@ -26,6 +32,7 @@ enum Message {
     IncrementPressed,
     DecrementPressed,
     FileNameChanged(String),
+    FileMoved(PathBuf),
 }
 
 impl Sandbox for Frontend {
@@ -40,10 +47,21 @@ impl Sandbox for Frontend {
             load_button: button::State::new(),
             increment_button: button::State::new(),
             decrement_button: button::State::new(),
+            folder_buttons: Vec::new(),
+            folder_buttons1: Vec::new(),
         };
+
+// ****** this is temporary until pictures are loaded with a button!!! *******************
         test.backend
-            .load_folders_and_files("/home/nick/Pictures".to_string())
+            .load_folders_and_files("/home/nick/Pictures/movingTest".to_string())
             .expect("well, it failed to find the pictures");
+
+	let folder_count = test.backend.folders.len();
+        for x in 0..folder_count {
+		test.folder_buttons1.push(Folder::new(test.backend.folders[x].clone()));
+		//self.folder_buttons.push(button::State::new())
+        }
+// ************************************
 
         test
     }
@@ -64,10 +82,26 @@ impl Sandbox for Frontend {
                 println!("file name field: {}", value);
                 self.file_name_value = value;
             }
+            Message::FileMoved(value) => {
+                println!("moving file to : {:?}", value);
+		self.backend.move_file(value);
+		self.update(Message::IncrementPressed);
+                //self.file_name_value = value;
+            }
         }
     }
 
     fn view(&mut self) -> Element<Message> {
+        let mut myColumn = Column::new();
+	myColumn = self.folder_buttons1.iter_mut().fold(Column::new(), |column, button| {
+	    //column.push(Button::new(button, Text::new("frank")))
+		let label:&str = button.path.file_name().unwrap().to_str().unwrap();
+	    column.push(Button::new(&mut button.button_state, Text::new(label))
+			.on_press(Message::FileMoved(button.path.clone())))
+	});
+
+        // Container::new(newRow)
+
         Row::new()
             .padding(20)
             .push(
@@ -82,7 +116,7 @@ impl Sandbox for Frontend {
                         .height(Length::Fill)
                         .center_x(),
                     )
-                    .push(
+		    .push(
                         // file information and load
                         Row::new().push(
                             Row::new()
@@ -118,7 +152,16 @@ impl Sandbox for Frontend {
                                 .on_press(Message::DecrementPressed),
                         )
                     )
-                    
+                    // in todo example
+                    // line ~90 is when tasks are created and added to the vec
+                    // line ~170 is when tasks are being made into gui elements, i think
+                    .push(
+                        Column::new()
+                        .push(
+                            Container::new(myColumn)
+                        )
+                    )
+
             )
             .into()
 
@@ -137,5 +180,42 @@ impl Sandbox for Frontend {
                     .push(picture(&self.backend))
                     .into()
                     */
+        
     }
+}
+
+
+
+
+// fn test() -> Element<Message> + 'static {
+//     let newRows: Element<_>
+// }
+
+impl Frontend {
+    // fn testFunc() -> ! {
+    //     let mut newRow = Row::new().push(Text::new("File Name").width(Length::Shrink));
+    //     return newRow.into();
+    // }
+    // fn test() -> Element<Message> + 'static {
+    // let mut newRow = Row::new();
+    // for x in 0..10 {
+    // newRow.push(Text::new("File Name").width(Length::Shrink));
+    // }
+    //
+    // Container::new(newRow)
+    // }
+}
+
+struct Folder {
+	path: PathBuf,
+	button_state: button::State,
+}
+
+impl Folder {
+	pub fn new(path: PathBuf) -> Folder {
+		Folder {
+			path: path,
+			button_state: button::State::new(),
+		}
+	}
 }
