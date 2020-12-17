@@ -23,7 +23,6 @@ struct Frontend {
     increment_button: button::State,
     decrement_button: button::State,
 
-    folder_buttons: Vec<button::State>,
     folder_buttons1: Vec<Folder>,
 }
 
@@ -47,7 +46,6 @@ impl Sandbox for Frontend {
             load_button: button::State::new(),
             increment_button: button::State::new(),
             decrement_button: button::State::new(),
-            folder_buttons: Vec::new(),
             folder_buttons1: Vec::new(),
         };
 
@@ -84,20 +82,22 @@ impl Sandbox for Frontend {
             }
             Message::FileMoved(value) => {
                 println!("moving file to : {:?}", value);
-		self.backend.move_file(value);
-		self.update(Message::IncrementPressed);
+                self.backend.move_file(value);
+                self.update(Message::IncrementPressed);
                 //self.file_name_value = value;
             }
         }
     }
 
     fn view(&mut self) -> Element<Message> {
-        let mut myColumn = Column::new();
-	myColumn = self.folder_buttons1.iter_mut().fold(Column::new(), |column, button| {
+        let myColumn = self.folder_buttons1.iter_mut().fold(Column::new(), |column, button| {
 	    //column.push(Button::new(button, Text::new("frank")))
 		let label:&str = button.path.file_name().unwrap().to_str().unwrap();
 	    column.push(Button::new(&mut button.button_state, Text::new(label))
-			.on_press(Message::FileMoved(button.path.clone())))
+            .on_press(Message::FileMoved(button.path.clone()))
+            .width(Length::Fill)
+        )
+        .spacing(10)
 	});
 
         // Container::new(newRow)
@@ -141,6 +141,7 @@ impl Sandbox for Frontend {
                 // button and folder panel
                 Column::new()
                     .padding(20)
+                    .max_width(245)
                     .push(
                         Row::new()
                         .push(
