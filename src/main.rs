@@ -110,7 +110,8 @@ impl Sandbox for Frontend {
                     .push(
                         Container::new(
                             Image::new(image::Handle::from_path(self.backend.get_current_file()))
-                                .width(Length::Fill),
+                                .width(Length::Fill)
+                                .height(Length::Fill)
                         )
                         .width(Length::Fill)
                         .height(Length::Fill)
