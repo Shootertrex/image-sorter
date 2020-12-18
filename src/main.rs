@@ -5,6 +5,7 @@ use iced::{
 use iced_winit:: {Widget};
 use sorter_backend::Backend;
 use std::path::{Path, PathBuf};
+use std::io::ErrorKind;
 
 pub fn main() {
     // can change Settings to allow for resizable and different starting size
@@ -23,7 +24,7 @@ struct Frontend {
     increment_button: button::State,
     decrement_button: button::State,
 
-    folder_buttons1: Vec<Folder>,
+    folder_buttons: Vec<Folder>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,6 +33,7 @@ enum Message {
     DecrementPressed,
     FileNameChanged(String),
     FileMoved(PathBuf),
+    Load,
 }
 
 impl Sandbox for Frontend {
@@ -46,19 +48,19 @@ impl Sandbox for Frontend {
             load_button: button::State::new(),
             increment_button: button::State::new(),
             decrement_button: button::State::new(),
-            folder_buttons1: Vec::new(),
+            folder_buttons: Vec::new(),
         };
 
 // ****** this is temporary until pictures are loaded with a button!!! *******************
-        test.backend
-            .load_folders_and_files("/home/nick/Pictures/movingTest".to_string())
-            .expect("well, it failed to find the pictures");
+        // test.backend
+        //     .load_folders_and_files("/home/nick/Pictures/movingTest".to_string())
+        //     .expect("well, it failed to find the pictures");
 
-	let folder_count = test.backend.folders.len();
-        for x in 0..folder_count {
-		test.folder_buttons1.push(Folder::new(test.backend.folders[x].clone()));
-		//self.folder_buttons.push(button::State::new())
-        }
+        // let folder_count = test.backend.folders.len();
+        // for x in 0..folder_count {
+        //     test.folder_buttons1.push(Folder::new(test.backend.folders[x].clone()));
+        //     //self.folder_buttons.push(button::State::new())
+        // }
 // *************************************
 
         test
@@ -71,9 +73,19 @@ impl Sandbox for Frontend {
     fn update(&mut self, message: Message) {
         match message {
             Message::IncrementPressed => {
-                self.backend.increment().expect("whoops");
+                println!("incrementing");
+                match self.backend.skip() {
+                    Ok(_) => { /* do nothing */},
+                    Err(error) => {
+                        match error.kind() {
+                            ErrorKind::UnexpectedEof => println!("no remaining files!"),
+                            _ => println!("whoops")
+                        }
+                    },
+                };
             }
             Message::DecrementPressed => {
+                println!("decrementing");
                 self.backend.undo().expect("whoops");
             }
             Message::FileNameChanged(value) => {
@@ -83,14 +95,37 @@ impl Sandbox for Frontend {
             Message::FileMoved(value) => {
                 println!("moving file to : {:?}", value);
                 self.backend.move_file(value);
-                self.update(Message::IncrementPressed);
+                // self.update(Message::IncrementPressed);
                 //self.file_name_value = value;
+            }
+            Message::Load => {
+                if self.file_name_value == "" {
+                    return;
+                }
+                println!("loading files from {:?}", self.file_name_value);
+                match self.backend.load_folders_and_files(self.file_name_value.to_string()) {
+                    Ok(_) => {},
+                    Err(_) => {
+                        println!("well, it failed to find the pictures");
+                        return;
+                    }
+                        
+                }
+                    // .load_folders_and_files("/home/nick/Pictures/movingTest".to_string())
+                    // .expect("well, it failed to find the pictures");
+
+                self.folder_buttons = Vec::new();
+                let folder_count = self.backend.folders.len();
+                for x in 0..folder_count {
+                    self.folder_buttons.push(Folder::new(self.backend.folders[x].clone()));
+                    //self.folder_buttons.push(button::State::new())
+                }
             }
         }
     }
 
     fn view(&mut self) -> Element<Message> {
-        let myColumn = self.folder_buttons1.iter_mut().fold(Column::new(), |column, button| {
+        let myColumn = self.folder_buttons.iter_mut().fold(Column::new(), |column, button| {
 	    //column.push(Button::new(button, Text::new("frank")))
 		let label:&str = button.path.file_name().unwrap().to_str().unwrap();
 	    column.push(Button::new(&mut button.button_state, Text::new(label))
@@ -124,6 +159,7 @@ impl Sandbox for Frontend {
                                 .push(Text::new("File Name").width(Length::Shrink))
                                 .padding(20)
                                 .push(
+                                    // TODO: this text input is temporarily handling folder loading
                                     TextInput::new(
                                         &mut self.file_name_state,
                                         "This is the placeholder...",
@@ -133,7 +169,10 @@ impl Sandbox for Frontend {
                                     .width(Length::Fill),
                                 )
                                 .push(Button::new(&mut self.go_to_button, Text::new("Go to")))
-                                .push(Button::new(&mut self.load_button, Text::new("Load"))),
+                                .push(
+                                    Button::new(&mut self.load_button, Text::new("Load"))
+                                    .on_press(Message::Load)
+                                ),
                         ),
                     )
                     .width(Length::Fill),
