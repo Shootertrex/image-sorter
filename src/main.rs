@@ -1,6 +1,6 @@
 use iced::{
     button, Command, image, text_input, Button, Column, Container, Element, Image, Length, Row, Sandbox,
-    Settings, Text, TextInput,
+    scrollable, Scrollable, Settings, Text, TextInput,
 };
 use iced_winit:: {Widget};
 use sorter_backend::Backend;
@@ -25,6 +25,8 @@ struct Frontend {
     decrement_button: button::State,
 
     folder_buttons: Vec<Folder>,
+
+    scroll: scrollable::State,
 }
 
 #[derive(Debug, Clone)]
@@ -49,6 +51,7 @@ impl Sandbox for Frontend {
             increment_button: button::State::new(),
             decrement_button: button::State::new(),
             folder_buttons: Vec::new(),
+            scroll: scrollable::State::new(),
         };
 
 // ****** this is temporary until pictures are loaded with a button!!! *******************
@@ -125,15 +128,18 @@ impl Sandbox for Frontend {
     }
 
     fn view(&mut self) -> Element<Message> {
-        let myColumn = self.folder_buttons.iter_mut().fold(Column::new(), |column, button| {
-	    //column.push(Button::new(button, Text::new("frank")))
-		let label:&str = button.path.file_name().unwrap().to_str().unwrap();
-	    column.push(Button::new(&mut button.button_state, Text::new(label))
-            .on_press(Message::FileMoved(button.path.clone()))
-            .width(Length::Fill)
-        )
-        .spacing(10)
-	});
+        let folder_column = self.folder_buttons.iter_mut().fold(Column::new(), |column, button| {
+            //column.push(Button::new(button, Text::new("frank")))
+            let label:&str = button.path.file_name().unwrap().to_str().unwrap();
+            column.push(Button::new(&mut button.button_state, Text::new(label))
+                .on_press(Message::FileMoved(button.path.clone()))
+                .width(Length::Fill)
+            )
+            .spacing(10)
+        });
+
+        let scrolling_container = Scrollable::new(&mut self.scroll)
+            .push(folder_column);
 
         // Container::new(newRow)
 
@@ -199,7 +205,8 @@ impl Sandbox for Frontend {
                     .push(
                         Column::new()
                         .push(
-                            Container::new(myColumn)
+                            // Container::new(myColumn)
+                            Container::new(scrolling_container)
                         )
                     )
 
