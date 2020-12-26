@@ -42,7 +42,7 @@ impl Sandbox for Frontend {
     type Message = Message;
 
     fn new() -> Self {
-        let mut test = Frontend {
+        let front_end = Frontend {
             backend: Backend::new(),
             file_name_state: text_input::State::new(),
             file_name_value: String::new(),
@@ -54,19 +54,7 @@ impl Sandbox for Frontend {
             scroll: scrollable::State::new(),
         };
 
-// ****** this is temporary until pictures are loaded with a button!!! *******************
-        // test.backend
-        //     .load_folders_and_files("/home/nick/Pictures/movingTest".to_string())
-        //     .expect("well, it failed to find the pictures");
-
-        // let folder_count = test.backend.folders.len();
-        // for x in 0..folder_count {
-        //     test.folder_buttons1.push(Folder::new(test.backend.folders[x].clone()));
-        //     //self.folder_buttons.push(button::State::new())
-        // }
-// *************************************
-
-        test
+        front_end
     }
 
     fn title(&self) -> String {
@@ -98,8 +86,6 @@ impl Sandbox for Frontend {
             Message::FileMoved(value) => {
                 println!("moving file to : {:?}", value);
                 self.backend.move_file(value);
-                // self.update(Message::IncrementPressed);
-                //self.file_name_value = value;
             }
             Message::Load => {
                 if self.file_name_value == "" {
@@ -114,8 +100,6 @@ impl Sandbox for Frontend {
                     }
                         
                 }
-                    // .load_folders_and_files("/home/nick/Pictures/movingTest".to_string())
-                    // .expect("well, it failed to find the pictures");
 
                 self.folder_buttons = Vec::new();
                 let folder_count = self.backend.folders.len();
@@ -212,46 +196,7 @@ impl Sandbox for Frontend {
 
             )
             .into()
-
-        /* old original
-                Column::new()
-                    .padding(20)
-                    .push(
-                        Button::new(&mut self.increment_button, Text::new("Increment"))
-                            .on_press(Message::IncrementPressed),
-                    )
-        //            .push(Image::new(self.backend.get_current_file().to_string_lossy()))
-                    .push(
-                        Button::new(&mut self.decrement_button, Text::new("Decrement"))
-                            .on_press(Message::DecrementPressed),
-                    )
-                    .push(picture(&self.backend))
-                    .into()
-                    */
-        
     }
-}
-
-
-
-
-// fn test() -> Element<Message> + 'static {
-//     let newRows: Element<_>
-// }
-
-impl Frontend {
-    // fn testFunc() -> ! {
-    //     let mut newRow = Row::new().push(Text::new("File Name").width(Length::Shrink));
-    //     return newRow.into();
-    // }
-    // fn test() -> Element<Message> + 'static {
-    // let mut newRow = Row::new();
-    // for x in 0..10 {
-    // newRow.push(Text::new("File Name").width(Length::Shrink));
-    // }
-    //
-    // Container::new(newRow)
-    // }
 }
 
 struct Folder {
