@@ -1,5 +1,5 @@
 use iced::{
-    button, Command, image, text_input, Button, Column, Container, Element, Image, Length, Row, Sandbox,
+    Application, button, Command, executor, image, text_input, Button, Column, Container, Element, Image, Length, Row, Sandbox,
     scrollable, Scrollable, Settings, Text, TextInput,
 };
 use iced_winit:: {Widget};
@@ -38,10 +38,12 @@ enum Message {
     Load,
 }
 
-impl Sandbox for Frontend {
+impl Application for Frontend {
     type Message = Message;
+    type Executor = executor::Default;
+    type Flags = ();
 
-    fn new() -> Self {
+    fn new(_flags: ()) -> (Self, Command<Message>) {
         let front_end = Frontend {
             backend: Backend::new(),
             file_name_state: text_input::State::new(),
@@ -54,14 +56,17 @@ impl Sandbox for Frontend {
             scroll: scrollable::State::new(),
         };
 
-        front_end
+        (
+            front_end,
+            Command::none()
+        )
     }
 
     fn title(&self) -> String {
         String::from("A simple counter")
     }
 
-    fn update(&mut self, message: Message) {
+    fn update(&mut self, message: Message) -> Command<Message> {
         match message {
             Message::IncrementPressed => {
                 println!("incrementing");
@@ -89,14 +94,14 @@ impl Sandbox for Frontend {
             }
             Message::Load => {
                 if self.file_name_value == "" {
-                    return;
+                    return Command::none();
                 }
                 println!("loading files from {:?}", self.file_name_value);
                 match self.backend.load_folders_and_files(self.file_name_value.to_string()) {
                     Ok(_) => {},
                     Err(_) => {
                         println!("well, it failed to find the pictures");
-                        return;
+                        return Command::none();
                     }
                         
                 }
@@ -108,7 +113,9 @@ impl Sandbox for Frontend {
                     //self.folder_buttons.push(button::State::new())
                 }
             }
+
         }
+        Command::none()
     }
 
     fn view(&mut self) -> Element<Message> {
