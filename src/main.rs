@@ -1,11 +1,12 @@
 use iced::{
-    Application, button, Command, executor, image, keyboard, text_input, Button, Column, Container, Element, Image, Length, Row,
-    scrollable, Scrollable, Settings, Subscription, Text, TextInput,
+    button, executor, image, keyboard, scrollable, text_input, Application, Button, Column,
+    Command, Container, Element, Image, Length, Row, Scrollable, Settings, Subscription, Text,
+    TextInput,
 };
 use iced_native::{event, subscription, Event};
 use sorter_backend::Backend;
-use std::path::{Path, PathBuf};
 use std::io::ErrorKind;
+use std::path::{Path, PathBuf};
 
 pub fn main() {
     // can change Settings to allow for resizable and different starting size
@@ -57,10 +58,7 @@ impl Application for Frontend {
             scroll: scrollable::State::new(),
         };
 
-        (
-            front_end,
-            Command::none()
-        )
+        (front_end, Command::none())
     }
 
     fn title(&self) -> String {
@@ -72,12 +70,10 @@ impl Application for Frontend {
             Message::Skip => {
                 println!("incrementing");
                 match self.backend.skip() {
-                    Ok(_) => { /* do nothing */},
-                    Err(error) => {
-                        match error.kind() {
-                            ErrorKind::UnexpectedEof => println!("no remaining files!"),
-                            _ => println!("whoops")
-                        }
+                    Ok(_) => { /* do nothing */ }
+                    Err(error) => match error.kind() {
+                        ErrorKind::UnexpectedEof => println!("no remaining files!"),
+                        _ => println!("whoops"),
                     },
                 };
             }
@@ -99,8 +95,14 @@ impl Application for Frontend {
             }
             Message::NumberedFolder(value) => {
                 println!("moving file to folder {:?}", value);
-                println!("{:?}", self.folder_buttons.get(value).expect("no folders").path.clone());
-                self.update(Message::FileMoved(self.folder_buttons.get(value).expect("no folders").path.clone()));
+                println!( "{:?}", self.folder_buttons .get(value) .expect("no folders") .path .clone());
+                self.update(Message::FileMoved(
+                    self.folder_buttons
+                        .get(value)
+                        .expect("no folders")
+                        .path
+                        .clone(),
+                ));
                 // self.backend.move_file(value);
             }
             Message::Load => {
@@ -108,13 +110,15 @@ impl Application for Frontend {
                     return Command::none();
                 }
                 println!("loading files from {:?}", self.file_name_value);
-                match self.backend.load_folders_and_files(self.file_name_value.to_string()) {
-                    Ok(_) => {},
+                match self
+                    .backend
+                    .load_folders_and_files(self.file_name_value.to_string())
+                {
+                    Ok(_) => {}
                     Err(_) => {
                         println!("well, it failed to find the pictures");
                         return Command::none();
                     }
-                        
                 }
 
                 self.folder_buttons = Vec::new();
@@ -123,7 +127,6 @@ impl Application for Frontend {
                     self.folder_buttons.push(Folder::new(self.backend.folders[x].clone()));
                 }
             }
-
         }
         Command::none()
     }
@@ -144,19 +147,22 @@ impl Application for Frontend {
         })
     }
 
-
     fn view(&mut self) -> Element<Message> {
-        let folder_column = self.folder_buttons.iter_mut().fold(Column::new(), |column, button| {
-            let label:&str = button.path.file_name().unwrap().to_str().unwrap();
-            column.push(Button::new(&mut button.button_state, Text::new(label))
-                .on_press(Message::FileMoved(button.path.clone()))
-                .width(Length::Fill)
-            )
-            .spacing(10)
-        });
+        let folder_column = self
+            .folder_buttons
+            .iter_mut()
+            .fold(Column::new(), |column, button| {
+                let label: &str = button.path.file_name().unwrap().to_str().unwrap();
+                column
+                    .push(
+                        Button::new(&mut button.button_state, Text::new(label))
+                            .on_press(Message::FileMoved(button.path.clone()))
+                            .width(Length::Fill),
+                    )
+                    .spacing(10)
+            });
 
-        let scrolling_container = Scrollable::new(&mut self.scroll)
-            .push(folder_column);
+        let scrolling_container = Scrollable::new(&mut self.scroll).push(folder_column);
 
         Row::new()
             .padding(20)
@@ -167,13 +173,13 @@ impl Application for Frontend {
                         Container::new(
                             Image::new(image::Handle::from_path(self.backend.get_current_file()))
                                 .width(Length::Fill)
-                                .height(Length::Fill)
+                                .height(Length::Fill),
                         )
                         .width(Length::Fill)
                         .height(Length::Fill)
                         .center_x(),
                     )
-		    .push(
+                    .push(
                         // file information and load
                         Row::new().push(
                             Row::new()
@@ -192,7 +198,7 @@ impl Application for Frontend {
                                 .push(Button::new(&mut self.go_to_button, Text::new("Go to")))
                                 .push(
                                     Button::new(&mut self.load_button, Text::new("Load"))
-                                    .on_press(Message::Load)
+                                        .on_press(Message::Load),
                                 ),
                         ),
                     )
@@ -205,42 +211,34 @@ impl Application for Frontend {
                     .max_width(245)
                     .push(
                         Row::new()
-                        .push(
-                            Button::new(&mut self.increment_button, Text::new("Increment"))
-                                .on_press(Message::Skip),
-                        )
-                        .push(
-                            Button::new(&mut self.decrement_button, Text::new("Decrement"))
-                                .on_press(Message::Undo),
-                        )
+                            .push(
+                                Button::new(&mut self.increment_button, Text::new("Increment"))
+                                    .on_press(Message::Skip),
+                            )
+                            .push(
+                                Button::new(&mut self.decrement_button, Text::new("Decrement"))
+                                    .on_press(Message::Undo),
+                            ),
                     )
-                    .push(
-                        Column::new()
-                        .push(
-                            Container::new(scrolling_container)
-                        )
-                    )
-
+                    .push(Column::new().push(Container::new(scrolling_container))),
             )
             .into()
     }
-
 }
 
 struct Folder {
-	path: PathBuf,
-	button_state: button::State,
+    path: PathBuf,
+    button_state: button::State,
 }
 
 impl Folder {
-	pub fn new(path: PathBuf) -> Folder {
-		Folder {
-			path: path,
-			button_state: button::State::new(),
-		}
-	}
+    pub fn new(path: PathBuf) -> Folder {
+        Folder {
+            path: path,
+            button_state: button::State::new(),
+        }
+    }
 }
-
 
 fn handle_hotkey(modifiers: keyboard::Modifiers, key_code: keyboard::KeyCode) -> Option<Message> {
     println!("key code event");
