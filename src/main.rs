@@ -1,15 +1,14 @@
 use iced::{
-    Application, button, Command, executor, image, text_input, Button, Column, Container, Element, Image, Length, Row, Sandbox,
-    scrollable, Scrollable, Settings, Text, TextInput,
+    Application, button, Command, executor, image, keyboard, text_input, Button, Column, Container, Element, Image, Length, Row,
+    scrollable, Scrollable, Settings, Subscription, Text, TextInput,
 };
-use iced_winit:: {Widget};
+use iced_native::{event, subscription, Event};
 use sorter_backend::Backend;
 use std::path::{Path, PathBuf};
 use std::io::ErrorKind;
 
 pub fn main() {
     // can change Settings to allow for resizable and different starting size
-    // Frontend::run(Settings::default())
     Frontend::run(Settings::default());
 }
 
@@ -31,10 +30,12 @@ struct Frontend {
 
 #[derive(Debug, Clone)]
 enum Message {
-    IncrementPressed,
-    DecrementPressed,
+    Skip,
+    Undo,
+    Redo,
     FileNameChanged(String),
     FileMoved(PathBuf),
+    NumberedFolder(usize),
     Load,
 }
 
@@ -68,7 +69,7 @@ impl Application for Frontend {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::IncrementPressed => {
+            Message::Skip => {
                 println!("incrementing");
                 match self.backend.skip() {
                     Ok(_) => { /* do nothing */},
@@ -80,9 +81,13 @@ impl Application for Frontend {
                     },
                 };
             }
-            Message::DecrementPressed => {
-                println!("decrementing");
+            Message::Undo => {
+                println!("undoing");
                 self.backend.undo().expect("whoops");
+            }
+            Message::Redo => {
+                println!("redoing");
+                self.backend.redo().expect("whoops");
             }
             Message::FileNameChanged(value) => {
                 println!("file name field: {}", value);
@@ -91,6 +96,12 @@ impl Application for Frontend {
             Message::FileMoved(value) => {
                 println!("moving file to : {:?}", value);
                 self.backend.move_file(value);
+            }
+            Message::NumberedFolder(value) => {
+                println!("moving file to folder {:?}", value);
+                println!("{:?}", self.folder_buttons.get(value).expect("no folders").path.clone());
+                self.update(Message::FileMoved(self.folder_buttons.get(value).expect("no folders").path.clone()));
+                // self.backend.move_file(value);
             }
             Message::Load => {
                 if self.file_name_value == "" {
@@ -110,7 +121,6 @@ impl Application for Frontend {
                 let folder_count = self.backend.folders.len();
                 for x in 0..folder_count {
                     self.folder_buttons.push(Folder::new(self.backend.folders[x].clone()));
-                    //self.folder_buttons.push(button::State::new())
                 }
             }
 
@@ -118,9 +128,25 @@ impl Application for Frontend {
         Command::none()
     }
 
+    fn subscription(&self) -> Subscription<Message> {
+        subscription::events_with(|event, status| {
+            if let event::Status::Captured = status {
+                return None;
+            }
+
+            match event {
+                Event::Keyboard(keyboard::Event::KeyPressed {
+                    modifiers,
+                    key_code,
+                }) => handle_hotkey(modifiers, key_code),
+                _ => None,
+            }
+        })
+    }
+
+
     fn view(&mut self) -> Element<Message> {
         let folder_column = self.folder_buttons.iter_mut().fold(Column::new(), |column, button| {
-            //column.push(Button::new(button, Text::new("frank")))
             let label:&str = button.path.file_name().unwrap().to_str().unwrap();
             column.push(Button::new(&mut button.button_state, Text::new(label))
                 .on_press(Message::FileMoved(button.path.clone()))
@@ -131,8 +157,6 @@ impl Application for Frontend {
 
         let scrolling_container = Scrollable::new(&mut self.scroll)
             .push(folder_column);
-
-        // Container::new(newRow)
 
         Row::new()
             .padding(20)
@@ -183,20 +207,16 @@ impl Application for Frontend {
                         Row::new()
                         .push(
                             Button::new(&mut self.increment_button, Text::new("Increment"))
-                                .on_press(Message::IncrementPressed),
+                                .on_press(Message::Skip),
                         )
                         .push(
                             Button::new(&mut self.decrement_button, Text::new("Decrement"))
-                                .on_press(Message::DecrementPressed),
+                                .on_press(Message::Undo),
                         )
                     )
-                    // in todo example
-                    // line ~90 is when tasks are created and added to the vec
-                    // line ~170 is when tasks are being made into gui elements, i think
                     .push(
                         Column::new()
                         .push(
-                            // Container::new(myColumn)
                             Container::new(scrolling_container)
                         )
                     )
@@ -204,6 +224,7 @@ impl Application for Frontend {
             )
             .into()
     }
+
 }
 
 struct Folder {
@@ -218,4 +239,33 @@ impl Folder {
 			button_state: button::State::new(),
 		}
 	}
+}
+
+
+fn handle_hotkey(modifiers: keyboard::Modifiers, key_code: keyboard::KeyCode) -> Option<Message> {
+    println!("key code event");
+    use keyboard::KeyCode;
+
+    if modifiers.is_command_pressed() {
+        return match key_code {
+            KeyCode::Z => Some(Message::Undo),
+            KeyCode::Y => Some(Message::Redo),
+            _ => None,
+        };
+    }
+
+    return match key_code {
+        KeyCode::Space => Some(Message::Skip),
+        KeyCode::Key1 | KeyCode::Numpad1 => Some(Message::NumberedFolder(0)),
+        KeyCode::Key2 | KeyCode::Numpad2 => Some(Message::NumberedFolder(1)),
+        KeyCode::Key3 | KeyCode::Numpad3 => Some(Message::NumberedFolder(2)),
+        KeyCode::Key4 | KeyCode::Numpad4 => Some(Message::NumberedFolder(3)),
+        KeyCode::Key5 | KeyCode::Numpad5 => Some(Message::NumberedFolder(4)),
+        KeyCode::Key6 | KeyCode::Numpad6 => Some(Message::NumberedFolder(5)),
+        KeyCode::Key7 | KeyCode::Numpad7 => Some(Message::NumberedFolder(6)),
+        KeyCode::Key8 | KeyCode::Numpad8 => Some(Message::NumberedFolder(7)),
+        KeyCode::Key9 | KeyCode::Numpad9 => Some(Message::NumberedFolder(8)),
+        KeyCode::Key0 | KeyCode::Numpad0 => Some(Message::NumberedFolder(9)),
+        _ => None,
+    };
 }
