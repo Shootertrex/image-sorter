@@ -6,7 +6,7 @@ use iced::{
 use iced_native::{event, subscription, Event};
 use sorter_backend::Backend;
 use std::io::ErrorKind;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 pub fn main() {
     // can change Settings to allow for resizable and different starting size
@@ -18,8 +18,8 @@ struct Frontend {
     backend: Backend,
     file_name_state: text_input::State,
     file_name_value: String,
-    go_to_button: button::State,
     load_button: button::State,
+    error_message: String,
 
     increment_button: button::State,
     decrement_button: button::State,
@@ -50,8 +50,8 @@ impl Application for Frontend {
             backend: Backend::new(),
             file_name_state: text_input::State::new(),
             file_name_value: String::new(),
-            go_to_button: button::State::new(),
             load_button: button::State::new(),
+            error_message: String::new(),
             increment_button: button::State::new(),
             decrement_button: button::State::new(),
             folder_buttons: Vec::new(),
@@ -66,13 +66,16 @@ impl Application for Frontend {
     }
 
     fn update(&mut self, message: Message) -> Command<Message> {
+        // clear error text
+        self.error_message = String::new();
+        
         match message {
             Message::Skip => {
                 println!("incrementing");
                 match self.backend.skip() {
                     Ok(_) => { /* do nothing */ }
                     Err(error) => match error.kind() {
-                        ErrorKind::UnexpectedEof => println!("no remaining files!"),
+                        ErrorKind::UnexpectedEof => self.error_message = "No remaining files".to_owned(),
                         _ => println!("whoops"),
                     },
                 };
@@ -91,19 +94,21 @@ impl Application for Frontend {
             }
             Message::FileMoved(value) => {
                 println!("moving file to : {:?}", value);
-                self.backend.move_file(value);
+                self.error_message = self.file_name_value.clone();
+                match self.backend.move_file(value) {
+                    Ok(_) => { /* do nothing */},
+                    Err(error) => self.error_message = error.to_string()
+                }
             }
             Message::NumberedFolder(value) => {
                 println!("moving file to folder {:?}", value);
-                println!( "{:?}", self.folder_buttons .get(value) .expect("no folders") .path .clone());
-                self.update(Message::FileMoved(
-                    self.folder_buttons
-                        .get(value)
-                        .expect("no folders")
-                        .path
-                        .clone(),
-                ));
-                // self.backend.move_file(value);
+
+                match &self.folder_buttons.get(value) {
+                    Some(x) => {
+                        &self.update(Message::FileMoved(x.path.clone()));
+                    },
+                    None => { /* do nothing */ }
+                };
             }
             Message::Load => {
                 if self.file_name_value == "" {
@@ -195,12 +200,17 @@ impl Application for Frontend {
                                     )
                                     .width(Length::Fill),
                                 )
-                                .push(Button::new(&mut self.go_to_button, Text::new("Go to")))
                                 .push(
                                     Button::new(&mut self.load_button, Text::new("Load"))
                                         .on_press(Message::Load),
-                                ),
+                                )
                         ),
+                    )
+                    .push(
+                        Row::new().push(
+                            Row::new()
+                                .push(Text::new(&self.error_message).width(Length::Shrink))
+                        )
                     )
                     .width(Length::Fill),
             )
